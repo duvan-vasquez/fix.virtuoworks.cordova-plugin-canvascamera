@@ -12,8 +12,6 @@
     <license>MIT</license>
     <author>VirtuoWorks</author>
 
-    <dependency id="cordova-plugin-compat" version="^1.2.0" />
-
     <js-module name="CanvasCamera" src="www/CanvasCamera.js">
         <clobbers target="plugin.CanvasCamera" />
         <clobbers target="CanvasCamera" />
