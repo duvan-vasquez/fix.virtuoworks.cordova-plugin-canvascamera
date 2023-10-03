@@ -13,6 +13,7 @@ import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Base64;
@@ -405,37 +406,6 @@ public class CanvasCamera extends CordovaPlugin implements CanvasCameraInterface
         }
     }
 
-   private String[] getPermissions(boolean storageOnly, int mediaType) {
-        ArrayList<String> permissions = new ArrayList<>();
-
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android API 33 and higher
-            switch (mediaType) {
-                case PICTURE:
-                    permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
-                    break;
-                case VIDEO:
-                    permissions.add(Manifest.permission.READ_MEDIA_VIDEO);
-                    break;
-                default:
-                    permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
-                    permissions.add(Manifest.permission.READ_MEDIA_VIDEO);
-                    break;
-            }
-        } else {
-            // Android API 32 or lower
-            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
-            permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        }
-
-        if (!storageOnly) {
-            // Add camera permission when not storage.
-            permissions.add(Manifest.permission.CAMERA);
-        }
-
-        return permissions.toArray(new String[0]);
-    }
-
     @Override
     public boolean execute(String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
         mArgs = args;
@@ -443,24 +413,26 @@ public class CanvasCamera extends CordovaPlugin implements CanvasCameraInterface
         
         String[] PERMISSIONS = { };
 
-        boolean hasPermissions = false
+        boolean hasPermissions = false;
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            hasPermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA) &&
+            hasPermissions = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA) &&
                 PermissionHelper.hasPermission(this, Manifest.permission.READ_MEDIA_IMAGES) &&
                 PermissionHelper.hasPermission(this, Manifest.permission.READ_MEDIA_VIDEO);
-            PERMISSIONS = {
-                Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO
-            }
+            PERMISSIONS = new String[]{
+                    Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO
+            };
         }else {
-            hasPermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA) &&
+            hasPermissions = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA) &&
                 PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) &&
                 PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            PERMISSIONS = {
-                Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE
-            }
+            PERMISSIONS = new String[]{
+                    Manifest.permission.CAMERA,
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+            };
         }
 
-        if (hasPermission) {
+        if (hasPermissions) {
             if ("startCapture".equals(action)) {
                 if (LOGGING) Log.i(TAG, "Starting async startCapture thread...");
                 mActivity.runOnUiThread(new Runnable() {
