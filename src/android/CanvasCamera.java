@@ -63,7 +63,6 @@ public class CanvasCamera extends CordovaPlugin implements CanvasCameraInterface
     private static final int SEC_CAMERA_POSITION = 3;
 
     private final static String[] FILENAMES = {"fullsize", "thumbnail"};
-    private final static String[] PERMISSIONS = {Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
 
     protected int mFps;
     protected int mWidth;
@@ -406,14 +405,62 @@ public class CanvasCamera extends CordovaPlugin implements CanvasCameraInterface
         }
     }
 
+   private String[] getPermissions(boolean storageOnly, int mediaType) {
+        ArrayList<String> permissions = new ArrayList<>();
+
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android API 33 and higher
+            switch (mediaType) {
+                case PICTURE:
+                    permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
+                    break;
+                case VIDEO:
+                    permissions.add(Manifest.permission.READ_MEDIA_VIDEO);
+                    break;
+                default:
+                    permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
+                    permissions.add(Manifest.permission.READ_MEDIA_VIDEO);
+                    break;
+            }
+        } else {
+            // Android API 32 or lower
+            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+            permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        }
+
+        if (!storageOnly) {
+            // Add camera permission when not storage.
+            permissions.add(Manifest.permission.CAMERA);
+        }
+
+        return permissions.toArray(new String[0]);
+    }
+
     @Override
     public boolean execute(String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
         mArgs = args;
         mCurrentCallbackContext = callbackContext;
+        
+        String[] PERMISSIONS = { };
 
-        if (PermissionHelper.hasPermission(this, Manifest.permission.CAMERA) &&
+        boolean hasPermissions = false
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            hasPermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA) &&
+                PermissionHelper.hasPermission(this, Manifest.permission.READ_MEDIA_IMAGES) &&
+                PermissionHelper.hasPermission(this, Manifest.permission.READ_MEDIA_VIDEO);
+            PERMISSIONS = {
+                Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO
+            }
+        }else {
+            hasPermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA) &&
                 PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) &&
-                PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            PERMISSIONS = {
+                Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE
+            }
+        }
+
+        if (hasPermission) {
             if ("startCapture".equals(action)) {
                 if (LOGGING) Log.i(TAG, "Starting async startCapture thread...");
                 mActivity.runOnUiThread(new Runnable() {
